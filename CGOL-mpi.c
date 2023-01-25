@@ -5,7 +5,7 @@
 #include "game-of-life-test/glider.h"
 #include "game-of-life-test/grower.h"
 
-#define GEN_LIMIT 10
+#define GEN_LIMIT 5000
 #define BOARD_ROWS 3000
 #define BOARD_COLS 3000
 #define BOARD_ROW_START 1500
@@ -15,6 +15,111 @@ void perror_exit(const char *message)
 {
     perror(message);
     exit(EXIT_FAILURE);
+}
+
+void evolve_inner(uint8_t **local, uint8_t **new, int width_local, int height_local, int *sum_cell)
+{
+    // Access the cells of the actual grid, leaving out the auxiliary cells
+    // around the grid, yet, taking them into account for the calculations
+    // Can first compute the inner matrix, while waiting for the outer to send and receive
+    *sum_cell = 0;
+    for (int x = 2; x <= height_local-1; x++)
+    {
+        for (int y = 2; y <= width_local-1; y++)
+        {
+            int neighbors = 0;
+
+            // Add the value of each cell to neighbor's variable
+            neighbors = local[x - 1][y - 1] + local[x - 1][y] +
+                        local[x - 1][y + 1] + local[x][y - 1] +
+                        local[x][y + 1] + local[x + 1][y - 1] +
+                        local[x + 1][y] + local[x + 1][y + 1];
+
+            // Determine if the current cell is going to be alive or not
+            // 3 means that it has 3 neighbors 
+            // 2 means that it has 2 neighbors 
+            if (neighbors == 3 || (neighbors == 2 && (local[x][y] == 1))) {
+                new[x][y] = 1;
+                (*sum_cell) ++;
+            }
+            else
+                new[x][y] = 0;
+        }
+    }
+}
+
+void evolve_outer(uint8_t **local, uint8_t **new, int width_local, int height_local, int *sum_cell)
+{
+    // Compute the outer layer after communication
+    for (int x = 1; x <= height_local; x++)
+    {
+        int y = 1;
+        int neighbors = 0;
+        neighbors = local[x - 1][y - 1] + local[x - 1][y] +
+                    local[x - 1][y + 1] + local[x][y - 1] +
+                    local[x][y + 1] + local[x + 1][y - 1] +
+                    local[x + 1][y] + local[x + 1][y + 1];
+
+        if (neighbors == 3 || (neighbors == 2 && (local[x][y] == 1))) {
+            new[x][y] = 1;
+            (*sum_cell) ++;
+        }
+        else
+            new[x][y] = 0;
+    }
+    if (width_local != 1) {
+        for (int x = 1; x <= height_local; x++)
+        {
+            int y = width_local;
+            int neighbors = 0;
+            neighbors = local[x - 1][y - 1] + local[x - 1][y] +
+                        local[x - 1][y + 1] + local[x][y - 1] +
+                        local[x][y + 1] + local[x + 1][y - 1] +
+                        local[x + 1][y] + local[x + 1][y + 1];
+
+            if (neighbors == 3 || (neighbors == 2 && (local[x][y] == 1))) {
+                new[x][y] = 1;
+                (*sum_cell) ++;
+            }
+            else
+                new[x][y] = 0;
+        }
+    }
+    
+    for (int y = 2; y <= width_local-1; y++)
+    {
+        int x = 1;
+        int neighbors = 0;
+        neighbors = local[x - 1][y - 1] + local[x - 1][y] +
+                    local[x - 1][y + 1] + local[x][y - 1] +
+                    local[x][y + 1] + local[x + 1][y - 1] +
+                    local[x + 1][y] + local[x + 1][y + 1];
+
+        if (neighbors == 3 || (neighbors == 2 && (local[x][y] == 1))) {
+            new[x][y] = 1;
+            (*sum_cell) ++;
+        }
+        else
+            new[x][y] = 0;
+    }
+    if (height_local != 1) {
+        for (int y = 2; y <= width_local-1; y++)
+        {
+            int x = height_local;
+            int neighbors = 0;
+            neighbors = local[x - 1][y - 1] + local[x - 1][y] +
+                        local[x - 1][y + 1] + local[x][y - 1] +
+                        local[x][y + 1] + local[x + 1][y - 1] +
+                        local[x + 1][y] + local[x + 1][y + 1];
+
+            if (neighbors == 3 || (neighbors == 2 && (local[x][y] == 1))) {
+                new[x][y] = 1;
+                (*sum_cell) ++;
+            }
+            else
+                new[x][y] = 0;
+        }
+    }
 }
 
 void evolve(uint8_t **local, uint8_t **new, int width_local, int height_local, int *sum_cell)
@@ -91,7 +196,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < BOARD_ROWS; i++) {
         for (int j = 0; j < BOARD_COLS; j++) {
             if (i >= 1500 && i < BOARD_ROW_START+pattern_row && j >= 1500 && j < BOARD_COL_START+pattern_col)
-                board[i][j] = grower[i-1500][j-1500];
+                board[i][j] = grower[i-BOARD_ROW_START][j-BOARD_COL_START];
             else
                 board[i][j] = 0;
         }
@@ -125,16 +230,6 @@ int main(int argc, char *argv[]) {
                 local[x][y] = board[start_indices[0]+x-1][start_indices[1]+y-1];
         }
     }
-
-    // printf("here shows my matrix of rank %d:\n", my_rank);
-    // for (int i=0; i<height_local+2; i++)
-    // {
-    //     for(int j=0; j<width_local+2; j++)
-    //     {
-    //         printf("%hhu     ", local[i][j]);
-    //     }
-    //     printf("\n");
-    // }
 
     // Allocate space for the new array which holds the next generation of the local grid
     uint8_t **new = malloc((height_local + 2) * sizeof(uint8_t *));
@@ -250,14 +345,18 @@ int main(int argc, char *argv[]) {
     // The actual loop of Game of Life
     while (generation <= GEN_LIMIT) {
         // Different requests for odd and even generations in order to compensate the pointer swap of local and new arrays
+        int local_sum, global_sum;
+
         if ((generation % 2) == 1)
         {
             MPI_Startall(16, requests_odd);
+            evolve_inner(local, new, width_local, height_local, &local_sum);
             MPI_Waitall(16, requests_odd, MPI_STATUSES_IGNORE);
         }
         else
         {
             MPI_Startall(16, requests_even);
+            evolve_inner(local, new, width_local, height_local, &local_sum);
             MPI_Waitall(16, requests_even, MPI_STATUSES_IGNORE);
         }
 
@@ -278,13 +377,12 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        int local_sum, global_sum;
-        evolve(local, new, width_local, height_local, &local_sum);
+        // evolve(local, new, width_local, height_local, &local_sum);
+        evolve_outer(local, new, width_local, height_local, &local_sum);
         MPI_Reduce(&local_sum, &global_sum, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-        if (my_rank == 0) {
-            printf("This is iteration: %d.\n", generation);
-            printf("Generation %d: sum of cell is %d.\n", generation, global_sum);
-        }
+        // if (my_rank == 0) {
+        //     printf("Generation %d: sum of cell is %d.\n", generation, global_sum);
+        // }
 
         // The pointer swap
         uint8_t **temp_array = local;
