@@ -1,0 +1,6 @@
+#N 20cellquadraticgrowth.rle
+#O dani, 2022
+#C https://conwaylife.com/wiki/20-cell_quadratic_growth
+#C https://www.conwaylife.com/patterns/20cellquadraticgrowth.rle
+x = 97, y = 33, rule = B3/S23
+94bo$92bobo$94b2o6$88b3o11$96bo$95b2o8$3bob2o$2bo3bo$bo$bo$obo!
