@@ -1,9 +1,9 @@
 #include <mpi.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "game-of-life-assignment/beehive.h"
-#include "game-of-life-assignment/glider.h"
-#include "game-of-life-assignment/grower.h"
+#include "game-of-life-test/beehive.h"
+#include "game-of-life-test/glider.h"
+#include "game-of-life-test/grower.h"
 
 #define GEN_LIMIT 10
 #define BOARD_ROWS 3000
@@ -261,19 +261,6 @@ int main(int argc, char *argv[]) {
             MPI_Waitall(16, requests_even, MPI_STATUSES_IGNORE);
         }
 
-        // int tar = 2;
-        // if (my_rank == tar) {
-        //     printf("Generation %d; rank %d:\n", generation, my_rank);
-        //     for (int i=0; i<height_local+2; i++)
-        //     {
-        //         for(int j=0; j<width_local+2; j++)
-        //         {
-        //             printf("%hhu     ", local[i][j]);
-        //         }
-        //         printf("\n");
-        //     }
-        // }
-
         for (int j=0; j<width_local+2; j++) {
             if (coords[0] == 0) {
                 local[0][j] = 0;
@@ -291,18 +278,6 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // if (my_rank == tar) {
-        //     printf("Generation %d; rank %d:\n", generation, my_rank);
-        //     for (int i=0; i<height_local+2; i++)
-        //     {
-        //         for(int j=0; j<width_local+2; j++)
-        //         {
-        //             printf("%hhu     ", local[i][j]);
-        //         }
-        //         printf("\n");
-        //     }
-        // }
-
         int local_sum, global_sum;
         evolve(local, new, width_local, height_local, &local_sum);
         MPI_Reduce(&local_sum, &global_sum, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -310,18 +285,6 @@ int main(int argc, char *argv[]) {
             printf("This is iteration: %d.\n", generation);
             printf("Generation %d: sum of cell is %d.\n", generation, global_sum);
         }
-
-        // if (my_rank == tar) {
-        //     printf("Generation %d; rank %d:\n", generation, my_rank);
-        //     for (int i=0; i<height_local+2; i++)
-        //     {
-        //         for(int j=0; j<width_local+2; j++)
-        //         {
-        //             printf("%hhu     ", new[i][j]);
-        //         }
-        //         printf("\n");
-        //     }
-        // }
 
         // The pointer swap
         uint8_t **temp_array = local;
