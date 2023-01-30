@@ -212,7 +212,7 @@ int main(int argc, char *argv[]) {
     start_indices[0] = coords[0] * height_local; 
     start_indices[1] = coords[1] * width_local;
 
-    printf("my rank is %d, my coords is (%d, %d).\n", my_rank, coords[0], coords[1]);
+    // printf("my rank is %d, my coords is (%d, %d).\n", my_rank, coords[0], coords[1]);
 
     // Allocate space in each instance for the local array(s)
     uint8_t **local = malloc((height_local + 2) * sizeof(uint8_t *));
@@ -380,9 +380,9 @@ int main(int argc, char *argv[]) {
         // evolve(local, new, width_local, height_local, &local_sum);
         evolve_outer(local, new, width_local, height_local, &local_sum);
         MPI_Reduce(&local_sum, &global_sum, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-        // if (my_rank == 0) {
-        //     printf("Generation %d: sum of cell is %d.\n", generation, global_sum);
-        // }
+        if (my_rank == 0) {
+            printf("Generation %d: sum of cell is %d.\n", generation, global_sum);
+        }
 
         // The pointer swap
         uint8_t **temp_array = local;
